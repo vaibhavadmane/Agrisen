@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriSens Crop Recommendation</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; color: #333; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); }
+        h1 { color: #28a745; text-align: center; margin-bottom: 30px; }
+        .input-group { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px; }
+        .input-item { flex: 1 1 calc(50% - 20px); min-width: 250px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; }
+        input[type="number"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { background-color: #28a745; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; transition: background-color 0.3s; }
+        button:hover { background-color: #1e7e34; }
+        #result { text-align: center; margin-top: 30px; padding: 20px; border: 2px solid #28a745; border-radius: 8px; background-color: #e9f7ee; font-size: 1.2em; font-weight: bold; }
+        .error { color: #dc3545; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🌱 AgriSens Crop Recommender</h1>
+    <p style="text-align: center;">Enter your farm's parameters to find the best crop for your soil and climate.</p>
+
+    <div class="input-group">
+        <div class="input-item">
+            <label for="N">Nitrogen (N) (kg/ha):</label>
+            <input type="number" id="N" value="90" step="1">
+        </div>
+        <div class="input-item">
+            <label for="P">Phosphorus (P) (kg/ha):</label>
+            <input type="number" id="P" value="42" step="1">
+        </div>
+        <div class="input-item">
+            <label for="K">Potassium (K) (kg/ha):</label>
+            <input type="number" id="K" value="43" step="1">
+        </div>
+        <div class="input-item">
+            <label for="temperature">Temperature (°C):</label>
+            <input type="number" id="temperature" value="25.0" step="0.1">
+        </div>
+        <div class="input-item">
+            <label for="humidity">Humidity (%):</label>
+            <input type="number" id="humidity" value="80.0" step="0.1">
+        </div>
+        <div class="input-item">
+            <label for="ph">pH Value:</label>
+            <input type="number" id="ph" value="6.5" step="0.1">
+        </div>
+        <div class="input-item">
+            <label for="rainfall">Rainfall (mm):</label>
+            <input type="number" id="rainfall" value="150.0" step="0.1">
+        </div>
+    </div>
+    
+    <button onclick="getRecommendation()">GET CROP RECOMMENDATION</button>
+
+    <div id="result">
+        Enter parameters and click the button above.
+    </div>
+
+</div>
+
+<script>
+    async function getRecommendation() {
+        // Clear previous results and show loading
+        const resultDiv = document.getElementById('result');
+        resultDiv.innerHTML = "Processing... Please wait.";
+        resultDiv.classList.remove('error');
+
+        // 1. Collect all input values
+        const data = {
+            N: parseFloat(document.getElementById('N').value),
+            P: parseFloat(document.getElementById('P').value),
+            K: parseFloat(document.getElementById('K').value),
+            temperature: parseFloat(document.getElementById('temperature').value),
+            humidity: parseFloat(document.getElementById('humidity').value),
+            ph: parseFloat(document.getElementById('ph').value),
+            rainfall: parseFloat(document.getElementById('rainfall').value)
+        };
+
+        // Simple validation
+        if (Object.values(data).some(isNaN)) {
+            resultDiv.innerHTML = "Error: Please enter valid numbers for all fields.";
+            resultDiv.classList.add('error');
+            return;
+        }
+
+        try {
+            // 2. Send data to the Flask API
+            const response = await fetch('http://127.0.0.1:5000/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            // 3. Display the result
+            if (result.success) {
+                resultDiv.innerHTML = `The Optimal Crop to cultivate is: <strong>${result.recommended_crop}</strong>`;
+                resultDiv.style.borderColor = '#28a745';
+                resultDiv.style.backgroundColor = '#e9f7ee';
+            } else {
+                resultDiv.innerHTML = `An API Error occurred: ${result.error}`;
+                resultDiv.classList.add('error');
+                resultDiv.style.borderColor = '#dc3545';
+                resultDiv.style.backgroundColor = '#f8d7da';
+            }
+
+        } catch (error) {
+            // Handle network or connection errors
+            resultDiv.innerHTML = `
+                <p class="error">Connection Error: Could not reach the prediction server.</p>
+                <p>Please ensure the **api.py** script is running in your terminal.</p>
+            `;
+            resultDiv.classList.add('error');
+            resultDiv.style.borderColor = '#dc3545';
+            resultDiv.style.backgroundColor = '#f8d7da';
+            console.error('Fetch error:', error);
+        }
+    }
+</script>
+
+</body>
+</html>
